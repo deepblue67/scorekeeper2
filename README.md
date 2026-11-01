@@ -7,7 +7,7 @@ Ce fichier sert deux objectifs :
 - aider Christophe a se rappeler comment fonctionne l'application ;
 - donner a Codex, ou a tout autre intervenant, le contexte necessaire pour reprendre le projet sans repartir de zero.
 
-Derniere version documentee : `V20261101 15H00`.
+Derniere version documentee : `V20261101 15H30`.
 
 Derniere mise a jour du README : 2026-11-01.
 
@@ -331,7 +331,7 @@ Cette logique evite les doublons pour une meme manche.
 L'application utilise une constante :
 
 ```js
-const APP_VERSION = 'V20261101 15H00';
+const APP_VERSION = 'V20261101 15H30';
 ```
 
 Elle est presente dans :
@@ -353,7 +353,7 @@ const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
 Le test `tests/service-worker.unit.test.js` contient aussi le nom attendu du cache :
 
 ```js
-const currentCacheName = "scorekeeper-V20261101 15H00";
+const currentCacheName = "scorekeeper-V20261101 15H30";
 ```
 
 Quand on change `APP_VERSION`, il faut donc mettre a jour :
@@ -442,11 +442,12 @@ Fonction :
 buildGame(pg)
 ```
 
-Un seul ecran avec une bascule `Scores / Tableau` (l'ancien onglet `Classement` a disparu) :
+Un seul ecran avec trois vues : `Scores`, `Tableau` et `Classement` :
 
 - chaque joueur, dans l'ordre de jeu, affiche son rang (medaille, rangs partages en cas d'egalite), son total en gros et son score de la manche ;
 - bouton principal `Saisir la manche N` : ouvre le pave sur le premier joueur qui n'a pas encore saisi ;
 - `Tableau` : detail par manche, chaque case est modifiable ;
+- `Classement` : classement en temps reel trie par total, avec pour chaque joueur l'ecart au premier, ses points de la derniere manche jouee et l'evolution de sa place depuis la manche precedente (▲ / ▼ / =) ;
 - navigation secondaire `← M` / `M →` conservee pour revenir sur une manche ou sauter une manche sans score.
 
 ### Saisie De Score
@@ -546,6 +547,8 @@ Les reglages permettent de :
 - gerer les groupes de joueurs ;
 - exporter les donnees ;
 - importer des donnees.
+
+Gestion des jeux : chaque jeu de la liste peut etre renomme (appui sur son nom ou sur ✏️). Une case `Renommer aussi dans l'historique` (cochee par defaut) applique le nouveau nom aux parties terminees et a la partie en cours, pour que l'historique et les statistiques restent regroupes. Si le nouveau nom existe deja, les deux jeux sont fusionnes sans doublon.
 
 ## Themes
 
@@ -799,11 +802,11 @@ viewport: { width: 390, height: 844 }
 
 ## Etat Des Tests
 
-Lors de la derniere validation de la version `V20261101 15H00` :
+Lors de la derniere validation de la version `V20261101 15H30` :
 
-- 18 tests Playwright reussis ;
+- 21 tests Playwright reussis ;
 - 6 tests service worker reussis ;
-- total : 24 tests reussis.
+- total : 27 tests reussis.
 
 Remarque : les fichiers de tests recuperes depuis GitHub le 2026-11-01 etaient plus anciens que ce README (13 tests Playwright et 6 tests service worker, dont un qui attendait encore une activation immediate du service worker). Ils ont ete realignes sur le comportement reel : parcours `Jouer`, saisie en chaine, resultats, `Rejouer`, et mise a jour guidee du service worker.
 
@@ -885,7 +888,7 @@ VYYYYMMDD HHHH
 Exemple :
 
 ```text
-V20261101 15H00
+V20261101 15H30
 ```
 
 ### Toujours Lancer Les Tests
@@ -1126,6 +1129,14 @@ Aucun changement du format de donnees `sk_v3` ni de l'export `SK1:` : les donnee
 
 Version : `V20261101 15H00`.
 
+### 18. Classement En Direct Et Renommage Des Jeux
+
+- retour d'un onglet `Classement` pendant la partie, a droite de `Tableau` : tri par total, rangs partages en cas d'egalite, ecart au premier, points de la derniere manche et evolution des places ;
+- les jeux peuvent etre renommes depuis Reglages, avec propagation optionnelle a l'historique et a la partie en cours (`showEditGame`, `renameGameInData`) ;
+- 3 tests Playwright ajoutes.
+
+Version : `V20261101 15H30`.
+
 ## Points Connus Et Limites
 
 ### Application Monofichier
@@ -1186,7 +1197,7 @@ Avant de livrer :
 - [ ] incrementer `APP_VERSION` dans `sw.js` ;
 - [ ] mettre a jour `currentCacheName` dans `tests/service-worker.unit.test.js` ;
 - [ ] lancer les 6 tests service worker ;
-- [ ] lancer les 18 tests Playwright ;
+- [ ] lancer les 21 tests Playwright ;
 - [ ] verifier qu'il n'y a pas de dependance externe ;
 - [ ] verifier visuellement les ecrans touches ;
 - [ ] deployer uniquement `index.html` et `sw.js`.
@@ -1243,9 +1254,9 @@ Ce tableau est le suivi officiel des sujets techniques, d'architecture, de quali
 | Ne pas modifier les originaux | Les fichiers originaux dans `Downloads` ne doivent pas etre modifies directement. La livraison travaillee est dans `outputs/scorekeeper`. | Fait | Haute | Regle de travail conservee. |
 | Fichiers de production minimaux | L'application deployee a besoin uniquement de `index.html` et `sw.js`. | Fait | Haute | README recommande aussi de versionner les tests/outils sur GitHub. |
 | Depot GitHub complet hors `node_modules` | Pour garder le README coherent et conserver les tests, versionner tout le dossier sauf `node_modules`. | Fait | Moyenne | Structure recommandee : `index.html`, `sw.js`, `README.md`, `package*.json`, `playwright.config.js`, `scripts/`, `tests/`, `.gitignore`. |
-| Tests Playwright de caracterisation | Ajout de tests navigateur pour verrouiller les parcours principaux. | Fait | Haute | 18 tests Playwright dans `tests/scorekeeper.spec.js` (realignes en `V20261101 15H00`). |
+| Tests Playwright de caracterisation | Ajout de tests navigateur pour verrouiller les parcours principaux. | Fait | Haute | 21 tests Playwright dans `tests/scorekeeper.spec.js`. |
 | Tests unitaires service worker | Ajout de tests dedies au cache et au comportement hors ligne. | Fait | Haute | 6 tests dans `tests/service-worker.unit.test.js`, test d'installation aligne sur la mise a jour guidee. |
-| Total de tests | Suite actuelle composee de tests fonctionnels et service worker. | Fait | Haute | 24 tests valides sur `V20261101 15H00`. |
+| Total de tests | Suite actuelle composee de tests fonctionnels et service worker. | Fait | Haute | 27 tests valides sur `V20261101 15H30`. |
 | Serveur local de test | Ajout d'un serveur Node local pour tester l'application sans cache parasite. | Fait | Moyenne | `scripts/serve.mjs`, port `4173`. |
 | Configuration Playwright | Tests en viewport mobile Chrome, service workers bloques dans les tests UI. | Fait | Moyenne | `playwright.config.js`, viewport 390 x 844. |
 | Mise a jour atomique du stockage | Les changements passent par `upd(fn)` et ne remplacent l'etat en memoire que si `localStorage` accepte l'ecriture. | Fait | Haute | Evite les pertes d'etat en cas d'erreur de stockage. |
@@ -1256,7 +1267,7 @@ Ce tableau est le suivi officiel des sujets techniques, d'architecture, de quali
 | Suppression des dependances externes runtime | La livraison ne doit pas dependre de scripts, CSS, CDN ou polices externes. | Fait | Haute | Test dedie : aucun script externe, aucun lien CSS externe. |
 | Service worker autonome | Cache de `./`, `index.html` et `sw.js`, navigation network-first puis fallback cache. | Fait | Haute | `sw.js`, cache prefixe `scorekeeper-`. |
 | Nettoyage des anciens caches | A l'activation, les anciens caches ScoreKeeper sont supprimes. | Fait | Haute | Evite les conflits entre versions. |
-| Version forcee dans les deux fichiers | `APP_VERSION` existe dans `index.html` et `sw.js` pour forcer les mises a jour. | Fait | Haute | Derniere version : `V20261101 15H00`. |
+| Version forcee dans les deux fichiers | `APP_VERSION` existe dans `index.html` et `sw.js` pour forcer les mises a jour. | Fait | Haute | Derniere version : `V20261101 15H30`. |
 | Mise a jour du cache attendu en test | Quand `APP_VERSION` change, `currentCacheName` doit changer aussi dans le test service worker. | Fait | Haute | Regle documentee dans le README. |
 | Activation guidee du service worker | Une nouvelle version installee attend le clic utilisateur, puis l'app envoie `SKIP_WAITING` et recharge apres `controllerchange`. | Fait | Haute | Version `V20260618 23H59`. |
 | Manifest PWA dynamique | Le manifest est genere dans `index.html` sous forme de Blob. | Fait | Moyenne | Pas de fichier `manifest.json` separe. |
@@ -1300,7 +1311,7 @@ Ce tableau est le suivi officiel des sujets lies a l'usage, aux parcours joueur,
 | Modification d'un score existant | Cliquer un joueur deja saisi permet de modifier son score. | Fait | Haute | Evite les doublons de manche. |
 | Suppression d'un score | Un score deja saisi peut etre supprime et le total est recalcule. | Fait | Haute | Couvert par test. |
 | Detail par manche | Vue `Tableau` avec modification possible depuis chaque case. | Fait | Moyenne | Renomme en `V20261101 15H00`, couvert par test. |
-| Classement | Rang et total affiches en permanence sur chaque ligne joueur pendant la partie. | Fait | Moyenne | Onglet dedie supprime en `V20261101 15H00`. |
+| Classement | Rang et total sur chaque ligne joueur, plus un onglet `Classement` en temps reel (ecart au 1er, derniere manche, evolution des places). | Fait | Haute | Onglet ajoute en `V20261101 15H30`, couvert par test. |
 | Navigation de manches | Aller a la manche precedente ou suivante. | Fait | Haute | Boutons de navigation autour de la manche courante. |
 | Indicateur de progression de manche | Affiche combien de joueurs ont saisi leur score pour la manche. | Fait | Moyenne | Exemple : `0/2 ont saisi`. |
 | Fin de partie | Terminer une partie, l'envoyer dans l'historique et afficher les resultats sur place. | Fait | Haute | Ecran de resultats depuis `V20261101 15H00`. |
@@ -1309,7 +1320,7 @@ Ce tableau est le suivi officiel des sujets lies a l'usage, aux parcours joueur,
 | Suppression d'une partie historique | Une partie terminee peut etre supprimee depuis la liste d'historique ou depuis son detail. | Fait | Haute | Version `V20260619 14H30`, couvert par test. |
 | Statistiques | Statistiques par joueur et par jeu, dans l'onglet Historique. | Fait | Moyenne | Integrees a l'historique en `V20261101 15H00`. |
 | Gestion des joueurs | Ajouter, modifier, supprimer des joueurs depuis Reglages. | Fait | Haute | Ajout et edition couverts par tests. |
-| Gestion des jeux | Ajouter des jeux personnalises. | Fait | Moyenne | Couvert par test de persistance. |
+| Gestion des jeux | Ajouter, renommer et supprimer des jeux. Le renommage peut s'appliquer a l'historique ; fusion si le nom existe deja. | Fait | Moyenne | Renommage ajoute en `V20261101 15H30`, couvert par tests. |
 | Groupes de joueurs | Associer des joueurs a Famille, Amis, Travail, Vacances. | Fait | Moyenne | Groupe Vacances ajoute en `V20260619 15H08`. |
 | Export QR Code | Export des donnees via QR Code quand la taille le permet. | Fait | Moyenne | QR integre localement. |
 | Export texte | Export alternatif sous forme de code texte `SK1:...`. | Fait | Moyenne | Utile si QR trop volumineux. |

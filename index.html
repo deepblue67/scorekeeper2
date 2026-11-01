@@ -1169,6 +1169,22 @@ h1{font-size:28px;font-weight:800;letter-spacing:-.04em;color:var(--text)}
   .pick-chip{font-size:15px;min-height:44px}
   .sk-toast{left:50%;right:auto;transform:translateX(-50%);min-width:420px}
 }
+
+.live-rank{gap:11px}
+.lr-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.lr-mid .rank-name{flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lr-sub{font-size:12px;color:var(--muted)}
+.lr-sub .nw{white-space:nowrap}
+.lr-move{font-size:12px;font-weight:800;min-width:28px;text-align:center;color:var(--muted)}
+.lr-move.up{color:#1f9d55}
+.lr-move.down{color:#c03030}
+.game-chip{gap:4px;padding-right:10px}
+.game-chip-name{background:none;border:none;color:inherit;font:inherit;padding:0;cursor:pointer}
+.game-chip-edit{background:none;border:none;font-size:12px;padding:0 2px;cursor:pointer;opacity:.75}
+.edit-game-warn{font-size:13px;color:#b06000;min-height:0;margin-bottom:6px}
+.edit-game-warn:empty{display:none}
+.edit-game-opt{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text);cursor:pointer}
+.edit-game-opt input{width:20px;height:20px;accent-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -1185,7 +1201,7 @@ h1{font-size:28px;font-weight:800;letter-spacing:-.04em;color:var(--text)}
 <script>
 
 // ── VERSION ─────────────────────────────────────────────────
-const APP_VERSION = 'V20261101 15H00';
+const APP_VERSION = 'V20261101 15H30';
 
 // ── THEMES ─────────────────────────────────────────────────
 const THEMES = [
@@ -1971,12 +1987,18 @@ function buildGame(pg){
   wrap.appendChild(hdr);
 
   const tb=div("tabbar");
-  [["scores","Scores"],["detail","Tableau"]].forEach(([t,l])=>{
+  [["scores","Scores"],["detail","Tableau"],["rank","Classement"]].forEach(([t,l])=>{
     const b=el("button","tab"+(gameTab===t?" on":""),l);
     b.onclick=()=>{gameTab=t;renderPage("play");};
     tb.appendChild(b);
   });
   wrap.appendChild(tb);
+
+  if(gameTab==="rank"){
+    buildLiveRanking(wrap,s);
+    wrap.appendChild(makeEndGameBtn(s));
+    return;
+  }
 
   if(gameTab==="detail"){
     buildScoreTable(wrap,s);
@@ -2054,6 +2076,64 @@ function buildGame(pg){
   }
 
   wrap.appendChild(makeEndGameBtn(s));
+}
+
+// Classement en temps réel : tri par total, écart au 1er, points de la
+// dernière manche jouée et évolution des places depuis la manche précédente.
+function buildLiveRanking(wrap,s){
+  const anyScore=s.players.some(p=>(p.scores||[]).length);
+  if(!anyScore){
+    const em=div("empty");
+    em.innerHTML=`<div class="empty-ico">🏆</div><div style="font-weight:700;font-size:17px">Pas encore de score</div><div style="font-size:14px;color:var(--muted);max-width:250px;line-height:1.5">Le classement se met à jour dès la première saisie.</div>`;
+    wrap.appendChild(em);
+    return;
+  }
+  const lastR=Math.max(...s.players.flatMap(p=>(p.scores||[]).map(sc=>sc.r||0)));
+  const ranks=playerRanks(s.players);
+  let prevRanks=null;
+  if(lastR>1){
+    const before=s.players.map(p=>({id:p.id,total:(p.scores||[]).filter(sc=>sc.r<lastR).reduce((a,sc)=>a+sc.v,0)}));
+    prevRanks=playerRanks(before);
+  }
+  const sorted=[...s.players].sort((a,b)=>b.total-a.total||s.players.indexOf(a)-s.players.indexOf(b));
+  const top=sorted[0].total;
+  const leaders=sorted.filter(p=>p.total===top).length;
+
+  const info=div("statusbar");
+  info.innerHTML=`<div class="sdot"></div><span style="font-size:13px;font-weight:600">En direct</span><span style="margin-left:auto;font-size:12px;color:var(--muted)">Après la manche ${lastR}</span>`;
+  wrap.appendChild(info);
+
+  sorted.forEach(p=>{
+    const i=ranks[p.id]-1;
+    const row=div(rankClass(i)+" live-rank");
+    const badge=div(badgeClass(i));badge.textContent=rankBadge(i);
+    const av=div(avClass(p));av.textContent=p.emoji;
+    const mid=div("lr-mid");
+    const nm=div("rank-name");nm.textContent=p.name;
+    const sub=div("lr-sub");
+    const gap=top-p.total;
+    const gapTxt=gap===0?(leaders>1?"Égalité en tête":"En tête"):"à "+gap+" pt"+(gap>1?"s":"")+" du 1er";
+    const last=roundScore(p,lastR);
+    const g1=el("span","nw");g1.textContent=gapTxt;
+    sub.appendChild(g1);
+    if(last!==undefined){
+      sub.appendChild(document.createTextNode(" "));
+      const g2=el("span","nw");g2.textContent=`· M${lastR} : ${last>0?"+":""}${last}`;
+      sub.appendChild(g2);
+    }
+    mid.appendChild(nm);mid.appendChild(sub);
+    row.appendChild(badge);row.appendChild(av);row.appendChild(mid);
+    if(prevRanks){
+      const move=prevRanks[p.id]-ranks[p.id];
+      const mv=el("span","lr-move"+(move>0?" up":move<0?" down":""));
+      mv.textContent=move>0?"▲"+move:move<0?"▼"+(-move):"=";
+      mv.setAttribute("aria-label",move>0?"Gagne "+move+" place"+(move>1?"s":""):move<0?"Perd "+(-move)+" place"+(move<-1?"s":""):"Même place");
+      row.appendChild(mv);
+    }
+    const sc=div("rank-score");sc.style.color=col(p.total);sc.textContent=p.total;
+    row.appendChild(sc);
+    wrap.appendChild(row);
+  });
 }
 
 function buildScoreTable(wrap,s){
@@ -2915,8 +2995,14 @@ function buildSettings(pg){
   gc.appendChild(gadd.firstChild);
   const glist=div("");glist.style.cssText="display:flex;flex-wrap:wrap;gap:7px";
   D.games.forEach(g=>{
-    const chip=div("chip");chip.appendChild(document.createTextNode(g+" "));
-    const xb=el("button","","✕",{});
+    const chip=div("chip game-chip");
+    const nb=el("button","game-chip-name","",{type:"button","aria-label":"Modifier le jeu "+g});
+    nb.textContent=g;
+    nb.onclick=()=>showEditGame(g);
+    const eb=el("button","game-chip-edit","✏️",{type:"button","aria-label":"Renommer "+g});
+    eb.onclick=()=>showEditGame(g);
+    chip.appendChild(nb);chip.appendChild(eb);
+    const xb=el("button","","✕",{type:"button","aria-label":"Supprimer le jeu "+g});
     xb.style.cssText="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 0 0 2px";
     xb.onclick=()=>{if(confirm("Supprimer le jeu \""+g+"\" ?"))upd(d=>({...d,games:d.games.filter(x=>x!==g)}));};
     chip.appendChild(xb);
@@ -3135,6 +3221,62 @@ function showImport(){
 }
 
 // ── EDIT PLAYER ────────────────────────────────────────────
+// Renommer un jeu : met à jour la liste, et au choix l'historique et la partie en cours.
+function renameGameInData(d,oldName,newName,withHistory){
+  const games=[];
+  d.games.forEach(g=>{
+    const n=g===oldName?newName:g;
+    if(!games.includes(n))games.push(n);
+  });
+  const next={...d,games};
+  if(withHistory){
+    next.sessions=d.sessions.map(x=>x.gameName===oldName?{...x,gameName:newName}:x);
+    if(d.current&&d.current.gameName===oldName)next.current={...d.current,gameName:newName};
+  }
+  return next;
+}
+function showEditGame(oldName){
+  const used=D.sessions.filter(x=>x.gameName===oldName).length+(D.current&&D.current.gameName===oldName?1:0);
+  let withHistory=true;
+  showModal((sheet,close)=>{
+    sheet.appendChild(div("mtitle","✏️ Modifier le jeu"));
+    const inp=el("input","inp","",{type:"text",autocomplete:"off","aria-label":"Nom du jeu"});
+    inp.value=oldName;
+    inp.style.marginBottom="12px";
+    sheet.appendChild(inp);
+    const warn=div("edit-game-warn");
+    sheet.appendChild(warn);
+    if(used){
+      const lab=el("label","edit-game-opt");
+      const cb=el("input","","",{type:"checkbox"});
+      cb.checked=true;
+      cb.onchange=()=>{withHistory=cb.checked;};
+      const tx=el("span","");
+      tx.textContent="Renommer aussi dans l'historique ("+used+" partie"+(used>1?"s":"")+")";
+      lab.appendChild(cb);lab.appendChild(tx);
+      sheet.appendChild(lab);
+    }
+    const refreshWarn=()=>{
+      const v=inp.value.trim();
+      const clash=v&&v!==oldName&&D.games.includes(v);
+      warn.textContent=clash?"« "+v+" » existe déjà : les deux jeux seront fusionnés.":"";
+    };
+    inp.oninput=refreshWarn;
+    const save=btn("btn btn-p btn-full","✓ Enregistrer",()=>{
+      const v=inp.value.trim();
+      if(!v){inp.focus();return;}
+      if(v===oldName){close();return;}
+      close();
+      if(setup.game===oldName)setup.game=v;
+      upd(d=>renameGameInData(d,oldName,v,withHistory));
+    });
+    save.style.marginTop="14px";
+    inp.onkeydown=e=>{if(e.key==="Enter")save.click();};
+    sheet.appendChild(save);
+    setTimeout(()=>{try{inp.focus();inp.select()}catch(e){}},50);
+  });
+}
+
 function showEditPlayer(player, onDone){
   let editEmoji = player.emoji;
   let editGroups = [...(player.groups||[])];

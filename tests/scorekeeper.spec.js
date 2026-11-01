@@ -435,3 +435,58 @@ test("offers a one-tap replay card on the setup screen", async ({ page }) => {
   const state = await stored(page);
   expect(state.current.players.map(player => player.name)).toEqual(["Alice", "Bob"]);
 });
+
+test("shows a live ranking tab with gaps and position changes", async ({ page }) => {
+  await startGame(page, ["Alice", "Bob", "Charlie"]);
+  await expect(page.locator(".tabbar .tab")).toHaveText(["Scores", "Tableau", "Classement"]);
+
+  // Manche 1 : Alice 10, Bob 5, Charlie 0
+  await page.getByRole("button", { name: /Saisir la manche 1/ }).click();
+  await typeDigits(page, 10);
+  await page.getByRole("button", { name: "✓ Valider → Bob" }).click();
+  await typeDigits(page, 5);
+  await page.getByRole("button", { name: "✓ Valider → Charlie" }).click();
+  await page.getByRole("button", { name: "✓ Valider", exact: true }).click();
+  // Manche 2 : Charlie passe devant
+  await enterScore(page, "Charlie", 20);
+
+  await page.getByRole("button", { name: "Classement", exact: true }).click();
+  const rows = page.locator(".live-rank");
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(0)).toContainText("Charlie");
+  await expect(rows.nth(0)).toContainText("En tête");
+  await expect(rows.nth(1)).toContainText("Alice");
+  await expect(rows.nth(1)).toContainText("à 10 pts du 1er");
+  await expect(rows.nth(0).getByLabel("Gagne 2 places")).toBeVisible();
+  await expect(rows.nth(1).getByLabel("Perd 1 place")).toBeVisible();
+});
+
+test("renames a game in the list, the history and the current game", async ({ page }) => {
+  await startGame(page);
+  await enterScore(page, "Alice", 4);
+  await page.getByRole("button", { name: /Terminer la partie/ }).click();
+  await page.getByRole("button", { name: /Confirmer/ }).click();
+
+  await openSettings(page);
+  await page.getByRole("button", { name: "Renommer Belote" }).click();
+  await page.locator(".sheet input[type='text']").fill("Belote coinchée");
+  await expect(page.locator(".sheet")).toContainText("historique (1 partie)");
+  await page.locator(".sheet").getByRole("button", { name: /Enregistrer/ }).click();
+
+  const state = await stored(page);
+  expect(state.games).toContain("Belote coinchée");
+  expect(state.games).not.toContain("Belote");
+  expect(state.sessions[0].gameName).toBe("Belote coinchée");
+});
+
+test("merges a renamed game into an existing one without duplicates", async ({ page }) => {
+  await openSettings(page);
+  await page.getByRole("button", { name: "Renommer UNO" }).click();
+  await page.locator(".sheet input[type='text']").fill("Belote");
+  await expect(page.locator(".sheet")).toContainText("fusionnés");
+  await page.locator(".sheet").getByRole("button", { name: /Enregistrer/ }).click();
+
+  const state = await stored(page);
+  expect(state.games.filter(game => game === "Belote")).toHaveLength(1);
+  expect(state.games).not.toContain("UNO");
+});

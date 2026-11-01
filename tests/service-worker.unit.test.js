@@ -5,7 +5,7 @@ import vm from "node:vm";
 
 const source = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
 const indexSource = readFileSync(new URL("../index.html", import.meta.url), "utf8");
-const currentCacheName = "scorekeeper-V20261101 15H00";
+const currentCacheName = "scorekeeper-V20261101 15H30";
 
 function requestKey(request) {
   return typeof request === "string" ? request : request.url;

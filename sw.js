@@ -1,7 +1,7 @@
 // ── ScoreKeeper Service Worker ────────────────────────────────
 // À placer à la RACINE du dépôt GitHub (même niveau qu'index.html)
 
-const APP_VERSION = 'V20261101 15H00';
+const APP_VERSION = 'V20261101 15H30';
 const CACHE_PREFIX = 'scorekeeper-';
 const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
 const APP_SHELL = './index.html';
